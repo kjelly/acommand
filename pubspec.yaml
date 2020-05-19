@@ -1,0 +1,10 @@
+name: acommand
+dependencies:
+    args:
+    threading:
+    ansicolor:
+    colorize: any
+    dart_console:
+    console:
+    cli_repl:
+    dcache:
