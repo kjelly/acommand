@@ -23,7 +23,8 @@ void main(List<String> args) async {
   parser.addOption('file-from', help: 'read the content from the command.');
   parser.addOption('worker', abbr: 'w', defaultsTo: "5");
 
-  parser.addFlag('help', abbr: "h");
+  parser.addFlag('help', abbr: "h", negatable: false);
+  parser.addFlag('error', defaultsTo: false, help: 'show the result even if the command failed');
   var results = parser.parse(args);
   if (results['help']) {
     print(parser.usage);
@@ -31,6 +32,7 @@ void main(List<String> args) async {
   }
   if (results.rest.length == 0) {
     print("Please provide command");
+    print(parser.usage);
     return;
   }
 
@@ -88,8 +90,6 @@ void main(List<String> args) async {
       d[name] = value;
     }
   }
-  print(argsDict);
-
   for (var i in argsDict) {
     while (worker <= 0) {
       await Future.delayed(Duration(milliseconds: 1));
@@ -113,7 +113,7 @@ void main(List<String> args) async {
           return null;
         }
         if (p.pid != 0) {
-          show(privateOldCommand, p);
+          show(privateOldCommand, p, showError: !results['no-error']);
         }
         if (p.exitCode == 0) {
           return run(c);
@@ -129,7 +129,7 @@ void main(List<String> args) async {
         return null;
       }
       var privateOldCommand = oldCommand;
-      show(privateOldCommand, p);
+      show(privateOldCommand, p, showError: !results['no-error']);
     });
   }
 
@@ -138,10 +138,13 @@ void main(List<String> args) async {
   }
 }
 
-void show(String command, ProcessResult p) {
+void show(String command, ProcessResult p, {bool showError=true}) {
   var error = '';
 
   if (p.exitCode != 0) {
+    if(!showError){
+      return;
+    }
     error = ' with error';
   }
   print("cmd$error: $command\nstdout:\n${p.stdout}\nstderr:${p.stderr}");
