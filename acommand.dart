@@ -25,22 +25,22 @@ void main(List<String> args) async {
 
   parser.addFlag('help', abbr: "h", negatable: false);
   parser.addFlag('error', defaultsTo: false, help: 'show the result even if the command failed');
-  var results = parser.parse(args);
-  if (results['help']) {
+  var argResults = parser.parse(args);
+  if (argResults['help']) {
     print(parser.usage);
     return;
   }
-  if (results.rest.length == 0) {
+  if (argResults.rest.length == 0) {
     print("Please provide command");
     print(parser.usage);
     return;
   }
 
-  var worker = int.tryParse(results['worker']) ?? 5;
+  var worker = int.tryParse(argResults['worker']) ?? 5;
   var done = 0;
 
-  var argsDict = List<Map<String, String>>();
-  for (var i in results['file']) {
+  var argList = List<Map<String, String>>();
+  for (var i in argResults['file']) {
     var index = 0;
     var parts = i.toString().split('=');
     var name = parts[0];
@@ -51,16 +51,16 @@ void main(List<String> args) async {
       if(line.length == 0){
         continue;
       }
-      if (index >= argsDict.length) {
-        argsDict.add(Map<String, String>());
+      if (index >= argList.length) {
+        argList.add(Map<String, String>());
       }
-      var d = argsDict[index];
+      var d = argList[index];
       d[name] = line;
       index += 1;
     }
   }
 
-  for (var i in results['command']) {
+  for (var i in argResults['command']) {
     var index = 0;
     var parts = i.toString().split('=');
     var name = parts[0];
@@ -71,30 +71,30 @@ void main(List<String> args) async {
       if (line.length == 0){
         continue;
       }
-      if (index >= argsDict.length) {
-        argsDict.add(Map<String, String>());
+      if (index >= argList.length) {
+        argList.add(Map<String, String>());
       }
-      var d = argsDict[index];
+      var d = argList[index];
       d[name] = line;
       index += 1;
     }
   }
-  if (argsDict.length == 0) {
-    argsDict.add(Map<String, String>());
+  if (argList.length == 0) {
+    argList.add(Map<String, String>());
   }
-  for (var i in results['string']) {
+  for (var i in argResults['string']) {
     var parts = i.toString().split('=');
     var name = parts[0];
     var value = parts.getRange(1, parts.length).toList().join('=');
-    for (var d in argsDict) {
+    for (var d in argList) {
       d[name] = value;
     }
   }
-  for (var i in argsDict) {
+  for (var i in argList) {
     while (worker <= 0) {
       await Future.delayed(Duration(milliseconds: 1));
     }
-    var command = results.rest[0];
+    var command = argResults.rest[0];
     for (var k in i.keys) {
       command = command.replaceAll(k, i[k]);
     }
@@ -102,7 +102,7 @@ void main(List<String> args) async {
     var fp = Future.value(ProcessResult(0, 0, "", ""));
     var oldCommand = null;
     worker -= 1;
-    for (var c in results.rest.getRange(0, results.rest.length)) {
+    for (var c in argResults.rest.getRange(0, argResults.rest.length)) {
       for (var k in i.keys) {
         c = c.replaceAll(k, i[k]);
       }
@@ -113,7 +113,7 @@ void main(List<String> args) async {
           return null;
         }
         if (p.pid != 0) {
-          show(privateOldCommand, p, showError: !results['no-error']);
+          show(privateOldCommand, p, showError: argResults['error']);
         }
         if (p.exitCode == 0) {
           return run(c);
@@ -129,11 +129,11 @@ void main(List<String> args) async {
         return null;
       }
       var privateOldCommand = oldCommand;
-      show(privateOldCommand, p, showError: !results['no-error']);
+      show(privateOldCommand, p, showError: argResults['error']);
     });
   }
 
-  while (done < argsDict.length) {
+  while (done < argList.length) {
     await Future.delayed(Duration(milliseconds: 1));
   }
 }
