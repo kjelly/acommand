@@ -8,3 +8,4 @@ dependencies:
     console:
     cli_repl:
     dcache:
+    uuid: ^2.2.2

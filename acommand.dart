@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:ansicolor/ansicolor.dart';
 import 'package:args/args.dart';
 import 'package:dcache/dcache.dart';
+import 'package:uuid/uuid.dart';
 
 Future<ProcessResult> run(String command) {
   return Process.run('bash', ['-c', command]);
@@ -16,9 +17,11 @@ void main(List<String> args) async {
       help: 'read the content from the files.',
       valueHelp: 'name=file');
   parser.addMultiOption('command',
-      abbr: "c", help: 'read the content from the command.');
+      abbr: "c", help: 'read the content from the command.', valueHelp: 'name=command');
   parser.addMultiOption('string',
-      abbr: "s", help: 'read the content from the command.');
+      abbr: "s", help: 'replace the name with the string', valueHelp: 'name=string');
+  parser.addMultiOption('tempfile',
+      abbr: "t", help: 'replace the name with the tempfile path', valueHelp: 'name=string');
   parser.addOption('command-from', help: 'read the content from the command.');
   parser.addOption('file-from', help: 'read the content from the command.');
   parser.addOption('worker', abbr: 'w', defaultsTo: "5");
@@ -38,6 +41,8 @@ void main(List<String> args) async {
 
   var worker = int.tryParse(argResults['worker']) ?? 5;
   var done = 0;
+  var tempDir = Directory.systemTemp.createTempSync();
+  var uuid = Uuid();
 
   var argList = List<Map<String, String>>();
   for (var i in argResults['file']) {
@@ -90,6 +95,12 @@ void main(List<String> args) async {
       d[name] = value;
     }
   }
+  for (var i in argResults['tempfile']) {
+    for (var d in argList) {
+      var filename = uuid.v4();
+      d[i] = "${tempDir.path}/$filename";
+    }
+  }
   for (var i in argList) {
     while (worker <= 0) {
       await Future.delayed(Duration(milliseconds: 1));
@@ -136,6 +147,8 @@ void main(List<String> args) async {
   while (done < argList.length) {
     await Future.delayed(Duration(milliseconds: 1));
   }
+  print(tempDir.path);
+  tempDir.deleteSync(recursive: true);
 }
 
 void show(String command, ProcessResult p, {bool showError=true}) {
